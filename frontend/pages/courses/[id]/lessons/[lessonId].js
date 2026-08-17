@@ -12,6 +12,87 @@ function toEmbedUrl(url) {
   return url;
 }
 
+function Quiz({ lessonId, questions }) {
+  const [selected, setSelected] = useState({});
+  const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!questions || questions.length === 0) return null;
+
+  const handleSelect = (questionId, choiceId) => {
+    if (result) return;
+    setSelected({ ...selected, [questionId]: choiceId });
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const { data } = await api.post(`/lessons/${lessonId}/check-quiz/`, { answers: selected });
+      setResult(data);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setResult(null);
+    setSelected({});
+  };
+
+  const allAnswered = questions.every((q) => selected[q.id] !== undefined);
+
+  return (
+    <div className="quiz">
+      <h2>Bilimingizni tekshiring</h2>
+      {questions.map((q) => (
+        <div key={q.id} className="quiz-question">
+          <p className="quiz-question-text">{q.text}</p>
+          <div className="quiz-choices">
+            {q.choices.map((c) => {
+              const isSelected = selected[q.id] === c.id;
+              let choiceClass = "quiz-choice";
+              if (isSelected) choiceClass += " selected";
+              if (result) {
+                const isCorrect = result.correct_choices[q.id] === c.id;
+                if (isCorrect) choiceClass += " correct";
+                else if (isSelected) choiceClass += " incorrect";
+              }
+              return (
+                <button
+                  type="button"
+                  key={c.id}
+                  className={choiceClass}
+                  onClick={() => handleSelect(q.id, c.id)}
+                  disabled={!!result}
+                >
+                  {c.text}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {!result && (
+        <button onClick={handleSubmit} disabled={!allAnswered || submitting}>
+          {submitting ? "Tekshirilmoqda..." : "Javoblarni yuborish"}
+        </button>
+      )}
+
+      {result && (
+        <div className="quiz-result">
+          <p>
+            Natija: <strong>{result.correct} / {result.total}</strong> to&apos;g&apos;ri javob
+          </p>
+          <button type="button" className="secondary" onClick={handleRetry}>
+            Qayta urinish
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LessonViewPage() {
   const router = useRouter();
   const { id: courseId, lessonId } = router.query;
@@ -90,6 +171,8 @@ export default function LessonViewPage() {
       )}
 
       {lesson.content && <p className="lesson-content">{lesson.content}</p>}
+
+      <Quiz lessonId={lessonId} questions={lesson.questions} />
     </div>
   );
 }

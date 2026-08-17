@@ -89,3 +89,28 @@ class Lesson(models.Model):
     @property
     def owner(self):
         return self.module.course.teacher
+
+
+class Question(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="questions")
+    text = models.CharField(max_length=500)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.text[:60]
+
+
+class Choice(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="choices")
+    text = models.CharField(max_length=255)
+    is_correct = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.text[:60]

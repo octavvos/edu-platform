@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import Course, Lesson, Module
@@ -88,3 +89,21 @@ class LessonViewSet(viewsets.ModelViewSet):
             | Q(module__course__teacher=user)
             | Q(module__course_id__in=enrolled_course_ids)
         )
+
+    @action(detail=True, methods=["post"], url_path="check-quiz", permission_classes=[AllowAny])
+    def check_quiz(self, request, pk=None):
+        lesson = self.get_object()
+        answers = request.data.get("answers", {})
+
+        total = 0
+        correct = 0
+        correct_choices = {}
+        for question in lesson.questions.prefetch_related("choices"):
+            total += 1
+            correct_choice = next((c for c in question.choices.all() if c.is_correct), None)
+            correct_choices[question.id] = correct_choice.id if correct_choice else None
+            submitted = answers.get(str(question.id))
+            if submitted is not None and correct_choice and int(submitted) == correct_choice.id:
+                correct += 1
+
+        return Response({"total": total, "correct": correct, "correct_choices": correct_choices})

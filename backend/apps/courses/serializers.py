@@ -1,15 +1,33 @@
 from rest_framework import serializers
 
-from .models import Course, Lesson, Module
+from .models import Choice, Course, Lesson, Module, Question
+
+
+class ChoicePublicSerializer(serializers.ModelSerializer):
+    """Exposes choice text only — `is_correct` stays server-side until check-quiz grades it."""
+
+    class Meta:
+        model = Choice
+        fields = ("id", "text")
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    choices = ChoicePublicSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ("id", "text", "choices")
 
 
 class LessonSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
+
     class Meta:
         model = Lesson
         fields = (
             "id", "module", "title", "content_type", "content",
             "video_url", "duration_minutes", "order", "is_free_preview",
-            "created_at",
+            "questions", "created_at",
         )
         read_only_fields = ("id", "created_at")
 

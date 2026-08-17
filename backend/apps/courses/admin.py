@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Course, Lesson, Module
+from .models import Choice, Course, Lesson, Module, Question
 
 
 class ModuleInline(admin.TabularInline):
@@ -10,6 +10,16 @@ class ModuleInline(admin.TabularInline):
 
 class LessonInline(admin.TabularInline):
     model = Lesson
+    extra = 1
+
+
+class ChoiceInline(admin.TabularInline):
+    model = Choice
+    extra = 2
+
+
+class QuestionInline(admin.TabularInline):
+    model = Question
     extra = 1
 
 
@@ -33,3 +43,11 @@ class ModuleAdmin(admin.ModelAdmin):
 class LessonAdmin(admin.ModelAdmin):
     list_display = ("title", "module", "content_type", "duration_minutes", "is_free_preview")
     list_filter = ("content_type", "is_free_preview")
+    inlines = [QuestionInline]
+
+
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ("text", "lesson")
+    search_fields = ("text",)
+    inlines = [ChoiceInline]
