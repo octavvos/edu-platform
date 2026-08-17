@@ -140,7 +140,7 @@ function ManageCourseContent() {
   if (error) return <p className="error">{error}</p>;
   if (!course) return <p>Yuklanmoqda...</p>;
 
-  if (user && course.teacher !== user.id && user.role !== "admin") {
+  if (user && course.teacher !== user.id && user.role !== "admin" && user.role !== "super_admin") {
     return <p className="error">Bu kursni boshqarish huquqingiz yo&apos;q.</p>;
   }
 
@@ -198,7 +198,7 @@ function ManageCourseContent() {
               Moderatsiyaga yuborish
             </button>
           )}
-          {course.status === "moderation" && user?.role === "admin" && (
+          {course.status === "moderation" && (user?.role === "admin" || user?.role === "super_admin") && (
             <button className="secondary" onClick={publishCourse} disabled={publishing}>
               Tasdiqlash va nashr etish
             </button>

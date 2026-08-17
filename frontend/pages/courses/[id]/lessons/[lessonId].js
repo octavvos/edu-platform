@@ -93,6 +93,92 @@ function Quiz({ lessonId, questions }) {
   );
 }
 
+const SUBMISSION_STATUS_LABELS = {
+  submitted: "Tekshirilmoqda",
+  under_review: "Ko'rib chiqilmoqda",
+  needs_revision: "Qayta ishlash kerak",
+  accepted: "Qabul qilindi",
+};
+
+function HomeworkBox({ lessonId }) {
+  const [homework, setHomework] = useState(null);
+  const [submission, setSubmission] = useState(null);
+  const [content, setContent] = useState("");
+  const [link, setLink] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/homeworks/", { params: { lesson: lessonId } })
+      .then(({ data }) => {
+        const hw = (data.results ?? data)[0];
+        setHomework(hw || null);
+        if (hw) {
+          return api.get("/submissions/", { params: { homework: hw.id } }).then(({ data: subs }) => {
+            const list = subs.results ?? subs;
+            if (list.length > 0) setSubmission(list[0]);
+          });
+        }
+      })
+      .finally(() => setLoaded(true));
+  }, [lessonId]);
+
+  if (!loaded || !homework) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { data } = await api.post("/submissions/", { homework: homework.id, content, link });
+      setSubmission(data);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="quiz">
+      <h2>Uy vazifasi</h2>
+      <div className="quiz-question">
+        <p className="quiz-question-text">{homework.instructions}</p>
+        {homework.deadline && (
+          <p className="muted">Muddat: {new Date(homework.deadline).toLocaleString("uz-UZ")}</p>
+        )}
+      </div>
+
+      {submission && (
+        <div className="module">
+          <p>
+            Holat: <strong>{SUBMISSION_STATUS_LABELS[submission.status] || submission.status}</strong>
+            {submission.is_late && <span className="badge" style={{ marginLeft: 8 }}>Kech topshirilgan</span>}
+          </p>
+          {submission.score !== null && submission.score !== undefined && (
+            <p>Baho: <strong>{submission.score}/100</strong></p>
+          )}
+          {submission.feedback && <p className="muted">Fikr-mulohaza: {submission.feedback}</p>}
+        </div>
+      )}
+
+      {(!submission || submission.status === "needs_revision") && (
+        <form onSubmit={handleSubmit} className="form">
+          <label>
+            Yechim (matn)
+            <textarea rows={4} value={content} onChange={(e) => setContent(e.target.value)} />
+          </label>
+          <label>
+            Havola (GitHub, fayl va h.k.)
+            <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
+          </label>
+          <button type="submit" disabled={submitting}>
+            {submitting ? "Yuborilmoqda..." : submission ? "Qayta topshirish" : "Topshirish"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function LessonViewPage() {
   const router = useRouter();
   const { id: courseId, lessonId } = router.query;
@@ -100,6 +186,9 @@ export default function LessonViewPage() {
   const [lesson, setLesson] = useState(null);
   const [course, setCourse] = useState(null);
   const [status, setStatus] = useState("loading"); // loading | ok | forbidden | notfound
+  const [enrollment, setEnrollment] = useState(null);
+  const [completing, setCompleting] = useState(false);
+  const [progress, setProgress] = useState(null);
 
   useEffect(() => {
     if (!lessonId || authLoading) return;
@@ -117,7 +206,31 @@ export default function LessonViewPage() {
     if (courseId) {
       api.get(`/courses/${courseId}/`).then(({ data }) => setCourse(data)).catch(() => {});
     }
-  }, [lessonId, courseId, authLoading]);
+
+    if (courseId && user) {
+      api
+        .get("/enrollments/", { params: { course: courseId } })
+        .then(({ data }) => {
+          const list = data.results ?? data;
+          if (list.length > 0) setEnrollment(list[0]);
+        })
+        .catch(() => {});
+    }
+  }, [lessonId, courseId, authLoading, user]);
+
+  const markComplete = async () => {
+    if (!enrollment) return;
+    setCompleting(true);
+    try {
+      const { data } = await api.post(`/enrollments/${enrollment.id}/progress/`, {
+        lesson: lessonId,
+        status: "completed",
+      });
+      setProgress(data.enrollment_progress_percent);
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   if (status === "loading") return <p>Yuklanmoqda...</p>;
 
@@ -172,7 +285,17 @@ export default function LessonViewPage() {
 
       {lesson.content && <p className="lesson-content">{lesson.content}</p>}
 
+      {enrollment && (
+        <div className="form-actions" style={{ margin: "20px 0" }}>
+          <button onClick={markComplete} disabled={completing}>
+            {completing ? "Saqlanmoqda..." : "Darsni tugatdim"}
+          </button>
+          {progress !== null && <span className="muted">Kurs progressi: {progress}%</span>}
+        </div>
+      )}
+
       <Quiz lessonId={lessonId} questions={lesson.questions} />
+      {user && lesson.has_homework && <HomeworkBox lessonId={lessonId} />}
     </div>
   );
 }

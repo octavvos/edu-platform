@@ -34,11 +34,16 @@ export default function CourseDetailPage() {
   }, [id, user]);
 
   const isOwner = user && course && course.teacher === user.id;
-  const canAccessAllLessons = enrolled || isOwner || user?.role === "admin";
+  const canAccessAllLessons =
+    enrolled || isOwner || user?.role === "admin" || user?.role === "super_admin";
 
   const handleEnroll = async () => {
     if (!user) {
       router.push("/login");
+      return;
+    }
+    if (Number(course.price) > 0) {
+      router.push(`/checkout/${id}`);
       return;
     }
     setEnrolling(true);
@@ -69,7 +74,13 @@ export default function CourseDetailPage() {
 
       {!isOwner && (
         <button onClick={handleEnroll} disabled={enrolling || enrolled}>
-          {enrolled ? "Yozildingiz" : enrolling ? "Yuborilmoqda..." : "Kursga yozilish"}
+          {enrolled
+            ? "Yozildingiz"
+            : enrolling
+            ? "Yuborilmoqda..."
+            : Number(course.price) > 0
+            ? "Sotib olish"
+            : "Kursga yozilish"}
         </button>
       )}
       {isOwner && (

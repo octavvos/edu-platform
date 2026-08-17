@@ -3,6 +3,7 @@ from django.db import transaction
 
 from apps.accounts.models import User
 from apps.assessments.models import Choice, Question
+from apps.assignments.models import Homework
 from apps.courses.models import Course, Lesson, Module
 from apps.enrollments.models import Enrollment
 from apps.rbac.services import assign_role
@@ -944,6 +945,26 @@ LESSON_DURATION_MINUTES = 90
 class Command(BaseCommand):
     help = "Bitta to'liq dasturlash kursini (Scratch/Python/PostgreSQL/Django, 96 dars, testlar bilan) yaratadi."
 
+    def _seed_homeworks(self, course):
+        """H-01: har bir modulning oxirgi darsiga amaliy uy vazifasi biriktiradi (agar hali yo'q bo'lsa)."""
+        created_count = 0
+        for module in course.modules.prefetch_related("lessons").all():
+            last_lesson = module.lessons.order_by("-order").first()
+            if not last_lesson or hasattr(last_lesson, "homework"):
+                continue
+            Homework.objects.create(
+                lesson=last_lesson,
+                instructions=(
+                    f"\"{module.title}\" moduli bo'yicha amaliy topshiriq: shu modulda o'rgangan "
+                    "bilimlaringizga asoslanib kichik loyiha tayyorlang va kodni GitHub'ga yuklab, "
+                    "havolasini shu yerga qoldiring (yoki matn ko'rinishida yeching)."
+                ),
+                max_score=100,
+            )
+            created_count += 1
+        if created_count:
+            self.stdout.write(self.style.SUCCESS(f"{created_count} ta uy vazifasi yaratildi."))
+
     @transaction.atomic
     def handle(self, *args, **options):
         from django.core.management import call_command
@@ -1010,6 +1031,7 @@ class Command(BaseCommand):
             javohir = student_objs.get("javohir")
             if javohir:
                 Enrollment.objects.get_or_create(student=javohir, course=course, defaults={"progress_percent": 15})
+            self._seed_homeworks(course)
             self.stdout.write(self.style.SUCCESS("Demo ma'lumotlar tayyor."))
             self.stdout.write(f"Barcha demo foydalanuvchilar paroli: {DEFAULT_PASSWORD}")
             return
@@ -1046,6 +1068,7 @@ class Command(BaseCommand):
                 lesson_index += 1
 
         self.stdout.write(self.style.SUCCESS(f"{lesson_index} ta dars va test savoli yaratildi."))
+        self._seed_homeworks(course)
 
         javohir = student_objs.get("javohir")
         if javohir:
