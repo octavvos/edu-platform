@@ -49,7 +49,12 @@ function DashboardContent() {
             {courses.map((c) => (
               <li key={c.id}>
                 <Link href={`/dashboard/courses/${c.id}`}>{c.title}</Link> —{" "}
-                {c.is_published ? "Nashr etilgan" : "Qoralama"}
+                {{
+                  draft: "Qoralama",
+                  moderation: "Moderatsiyada",
+                  published: "Nashr etilgan",
+                  rejected: "Rad etilgan",
+                }[c.status] || c.status}
               </li>
             ))}
           </ul>

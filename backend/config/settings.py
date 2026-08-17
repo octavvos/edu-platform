@@ -21,10 +21,19 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "django_filters",
-    # local apps
-    "apps.users",
+    # local apps — TZ 5.4 loyiha strukturasi
+    "apps.core",
+    "apps.accounts",
+    "apps.rbac",
+    "apps.catalog",
     "apps.courses",
     "apps.enrollments",
+    "apps.assessments",
+    "apps.assignments",
+    "apps.certificates",
+    "apps.payments",
+    "apps.audit",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -80,7 +89,7 @@ CACHES = {
     }
 }
 
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -129,6 +138,12 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv(),
 )
 
-# OTP
+# OTP — A-04: 6 raqam, TTL 120 sekund
 OTP_CODE_LENGTH = config("OTP_CODE_LENGTH", default=6, cast=int)
-OTP_TTL_SECONDS = config("OTP_TTL_SECONDS", default=300, cast=int)
+OTP_TTL_SECONDS = config("OTP_TTL_SECONDS", default=120, cast=int)
+
+# Payments — 4.10-band / D-11. "manual" = lokal/demo (haqiqiy pul harakati yo'q).
+# Haqiqiy Payme hisobi ulanganda PAYMENT_PROVIDER=payme + kalitlar beriladi.
+PAYMENT_PROVIDER = config("PAYMENT_PROVIDER", default="manual")
+PAYME_MERCHANT_ID = config("PAYME_MERCHANT_ID", default="")
+PAYME_SECRET_KEY = config("PAYME_SECRET_KEY", default="")

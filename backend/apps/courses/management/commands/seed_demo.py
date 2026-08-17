@@ -1,9 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.courses.models import Choice, Course, Lesson, Module, Question
+from apps.accounts.models import User
+from apps.assessments.models import Choice, Question
+from apps.courses.models import Course, Lesson, Module
 from apps.enrollments.models import Enrollment
-from apps.users.models import User
+from apps.rbac.services import assign_role
 
 DEFAULT_PASSWORD = "Demo12345!"
 
@@ -944,6 +946,23 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        from django.core.management import call_command
+
+        call_command("seed_rbac")
+
+        admin_user, admin_created = User.objects.get_or_create(
+            username="admin",
+            defaults={
+                "email": "admin@example.com", "role": User.Role.SUPER_ADMIN,
+                "is_staff": True, "is_superuser": True, "is_phone_verified": True,
+            },
+        )
+        if admin_created:
+            admin_user.set_password("AdminPass123!")
+            admin_user.save()
+        assign_role(user=admin_user, role_name="super_admin")
+        self.stdout.write(f"Admin: {admin_user.username} ({'created' if admin_created else 'exists'})")
+
         teacher, created = User.objects.get_or_create(
             username=TEACHER["username"],
             defaults={**TEACHER, "role": User.Role.TEACHER, "is_phone_verified": True},
@@ -951,6 +970,7 @@ class Command(BaseCommand):
         if created:
             teacher.set_password(DEFAULT_PASSWORD)
             teacher.save()
+        assign_role(user=teacher, role_name="teacher")
         self.stdout.write(f"Teacher: {teacher.username} ({'created' if created else 'exists'})")
 
         student_objs = {}
@@ -962,6 +982,7 @@ class Command(BaseCommand):
             if created:
                 user.set_password(DEFAULT_PASSWORD)
                 user.save()
+            assign_role(user=user, role_name="student")
             student_objs[data["username"]] = user
             self.stdout.write(f"Student: {user.username} ({'created' if created else 'exists'})")
 
@@ -979,7 +1000,7 @@ class Command(BaseCommand):
                 "teacher": teacher,
                 "level": Course.Level.BEGINNER,
                 "price": 1500000,
-                "is_published": True,
+                "status": Course.Status.PUBLISHED,
             },
         )
         self.stdout.write(f"Course: {course.title} ({'created' if course_created else 'exists'})")

@@ -13,7 +13,6 @@ function NewCourseForm() {
     description: "",
     level: "beginner",
     price: 0,
-    is_published: false,
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -65,10 +64,10 @@ function NewCourseForm() {
           Narxi (so&apos;m, bepul uchun 0)
           <input type="number" name="price" min="0" value={form.price} onChange={handleChange} />
         </label>
-        <label className="checkbox-label">
-          <input type="checkbox" name="is_published" checked={form.is_published} onChange={handleChange} />
-          Darhol nashr etish
-        </label>
+        <p className="muted">
+          Kurs qoralama sifatida yaratiladi. Modul/dars qo&apos;shib bo&apos;lgach, uni
+          moderatsiyaga yuborasiz.
+        </p>
         {error && <p className="error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? "Yaratilmoqda..." : "Kursni yaratish"}

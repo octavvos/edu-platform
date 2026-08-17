@@ -144,14 +144,31 @@ function ManageCourseContent() {
     return <p className="error">Bu kursni boshqarish huquqingiz yo&apos;q.</p>;
   }
 
-  const togglePublish = async () => {
+  const submitForModeration = async () => {
     setPublishing(true);
     try {
-      const { data } = await api.patch(`/courses/${id}/`, { is_published: !course.is_published });
-      setCourse({ ...course, is_published: data.is_published });
+      const { data } = await api.post(`/courses/${id}/submit-for-moderation/`);
+      setCourse({ ...course, status: data.status, is_published: data.is_published });
     } finally {
       setPublishing(false);
     }
+  };
+
+  const publishCourse = async () => {
+    setPublishing(true);
+    try {
+      const { data } = await api.post(`/courses/${id}/publish/`);
+      setCourse({ ...course, status: data.status, is_published: data.is_published });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const STATUS_LABELS = {
+    draft: "Qoralama",
+    moderation: "Moderatsiyada",
+    published: "Nashr etilgan",
+    rejected: "Rad etilgan",
   };
 
   const handleModuleCreated = (module) => {
@@ -172,9 +189,21 @@ function ManageCourseContent() {
           <h1>{course.title}</h1>
           <p className="muted">{course.description}</p>
         </div>
-        <button className="secondary" onClick={togglePublish} disabled={publishing}>
-          {course.is_published ? "Qoralamaga o'tkazish" : "Nashr etish"}
-        </button>
+        <div>
+          <span className="badge" style={{ marginRight: 10 }}>
+            {STATUS_LABELS[course.status] || course.status}
+          </span>
+          {course.status === "draft" && (
+            <button className="secondary" onClick={submitForModeration} disabled={publishing}>
+              Moderatsiyaga yuborish
+            </button>
+          )}
+          {course.status === "moderation" && user?.role === "admin" && (
+            <button className="secondary" onClick={publishCourse} disabled={publishing}>
+              Tasdiqlash va nashr etish
+            </button>
+          )}
+        </div>
       </div>
 
       <h2>Modullar va darslar</h2>

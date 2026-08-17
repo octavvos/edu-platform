@@ -1,35 +1,25 @@
 from rest_framework import serializers
 
-from .models import Choice, Course, Lesson, Module, Question
+from apps.assessments.serializers import QuestionSerializer
 
-
-class ChoicePublicSerializer(serializers.ModelSerializer):
-    """Exposes choice text only — `is_correct` stays server-side until check-quiz grades it."""
-
-    class Meta:
-        model = Choice
-        fields = ("id", "text")
-
-
-class QuestionSerializer(serializers.ModelSerializer):
-    choices = ChoicePublicSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Question
-        fields = ("id", "text", "choices")
+from .models import Course, Lesson, Module
 
 
 class LessonSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
+    has_homework = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = (
             "id", "module", "title", "content_type", "content",
-            "video_url", "duration_minutes", "order", "is_free_preview",
-            "questions", "created_at",
+            "video_url", "duration_minutes", "order", "is_required",
+            "is_free_preview", "questions", "has_homework", "created_at",
         )
         read_only_fields = ("id", "created_at")
+
+    def get_has_homework(self, obj):
+        return hasattr(obj, "homework")
 
 
 class ModuleSerializer(serializers.ModelSerializer):
@@ -55,7 +45,10 @@ class LessonBriefSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lesson
-        fields = ("id", "module", "title", "content_type", "duration_minutes", "order", "is_free_preview")
+        fields = (
+            "id", "module", "title", "content_type", "duration_minutes",
+            "order", "is_required", "is_free_preview",
+        )
 
 
 class ModuleWithLessonsSerializer(serializers.ModelSerializer):
@@ -68,30 +61,36 @@ class ModuleWithLessonsSerializer(serializers.ModelSerializer):
 
 class CourseListSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
     modules_count = serializers.IntegerField(source="modules.count", read_only=True)
+    is_published = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Course
         fields = (
             "id", "title", "slug", "description", "cover_image",
-            "teacher", "teacher_name", "level", "price", "is_published",
+            "category", "category_name", "teacher", "teacher_name",
+            "level", "price", "currency", "status", "is_published",
             "modules_count", "created_at",
         )
-        read_only_fields = ("id", "slug", "teacher", "created_at")
+        read_only_fields = ("id", "slug", "teacher", "status", "created_at")
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
     modules = ModuleWithLessonsSerializer(many=True, read_only=True)
     teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    is_published = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Course
         fields = (
-            "id", "title", "slug", "description", "cover_image",
-            "teacher", "teacher_name", "level", "price", "is_published",
+            "id", "title", "slug", "description", "cover_image", "trailer_video_url",
+            "category", "category_name", "teacher", "teacher_name",
+            "level", "language", "price", "currency", "status", "is_published",
             "modules", "created_at", "updated_at",
         )
-        read_only_fields = ("id", "slug", "teacher", "created_at", "updated_at")
+        read_only_fields = ("id", "slug", "teacher", "status", "created_at", "updated_at")
 
     def create(self, validated_data):
         validated_data["teacher"] = self.context["request"].user

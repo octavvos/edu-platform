@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Choice, Course, Lesson, Module, Question
+from .models import Course, Lesson, Module, VideoAsset
 
 
 class ModuleInline(admin.TabularInline):
@@ -13,20 +13,10 @@ class LessonInline(admin.TabularInline):
     extra = 1
 
 
-class ChoiceInline(admin.TabularInline):
-    model = Choice
-    extra = 2
-
-
-class QuestionInline(admin.TabularInline):
-    model = Question
-    extra = 1
-
-
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ("title", "teacher", "level", "price", "is_published", "created_at")
-    list_filter = ("level", "is_published")
+    list_display = ("title", "teacher", "category", "level", "price", "status", "created_at")
+    list_filter = ("level", "status", "category")
     search_fields = ("title", "description", "teacher__username")
     prepopulated_fields = {"slug": ("title",)}
     inlines = [ModuleInline]
@@ -41,13 +31,11 @@ class ModuleAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ("title", "module", "content_type", "duration_minutes", "is_free_preview")
-    list_filter = ("content_type", "is_free_preview")
-    inlines = [QuestionInline]
+    list_display = ("title", "module", "content_type", "duration_minutes", "is_required", "is_free_preview")
+    list_filter = ("content_type", "is_required", "is_free_preview")
 
 
-@admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("text", "lesson")
-    search_fields = ("text",)
-    inlines = [ChoiceInline]
+@admin.register(VideoAsset)
+class VideoAssetAdmin(admin.ModelAdmin):
+    list_display = ("lesson", "provider", "status", "duration_seconds")
+    list_filter = ("provider", "status")
