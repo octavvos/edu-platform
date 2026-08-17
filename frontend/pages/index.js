@@ -18,7 +18,14 @@ export default function CatalogPage() {
 
   return (
     <div>
-      <h1>Kurslar katalogi</h1>
+      <div className="hero">
+        <h1>Bilim olish yo&apos;lidagi hamrohingiz</h1>
+        <p>
+          Dasturlash, dizayn va marketing bo&apos;yicha amaliy kurslar &mdash; tajribali
+          o&apos;qituvchilardan, o&apos;zingizga qulay tezlikda o&apos;rganing.
+        </p>
+      </div>
+      <h1 style={{ marginTop: 36 }}>Kurslar katalogi</h1>
       {loading && <p>Yuklanmoqda...</p>}
       {error && <p className="error">{error}</p>}
       <div className="grid">

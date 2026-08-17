@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -37,12 +38,18 @@ function DashboardContent() {
 
       {!loading && user.role === "teacher" && (
         <section>
-          <h2>Mening kurslarim</h2>
+          <div className="manage-header">
+            <h2>Mening kurslarim</h2>
+            <Link href="/dashboard/courses/new" className="link-btn primary-link">
+              + Yangi kurs yaratish
+            </Link>
+          </div>
           {courses.length === 0 && <p className="muted">Siz hali kurs yaratmagansiz.</p>}
           <ul className="list">
             {courses.map((c) => (
               <li key={c.id}>
-                {c.title} — {c.is_published ? "Nashr etilgan" : "Qoralama"}
+                <Link href={`/dashboard/courses/${c.id}`}>{c.title}</Link> —{" "}
+                {c.is_published ? "Nashr etilgan" : "Qoralama"}
               </li>
             ))}
           </ul>

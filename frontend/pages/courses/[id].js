@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -20,6 +21,20 @@ export default function CourseDetailPage() {
       .then(({ data }) => setCourse(data))
       .catch(() => setError("Kursni yuklashda xatolik yuz berdi."));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !user) return;
+    api
+      .get("/enrollments/", { params: { course: id } })
+      .then(({ data }) => {
+        const list = data.results ?? data;
+        setEnrolled(list.length > 0);
+      })
+      .catch(() => {});
+  }, [id, user]);
+
+  const isOwner = user && course && course.teacher === user.id;
+  const canAccessAllLessons = enrolled || isOwner || user?.role === "admin";
 
   const handleEnroll = async () => {
     if (!user) {
@@ -52,9 +67,16 @@ export default function CourseDetailPage() {
         </span>
       </div>
 
-      <button onClick={handleEnroll} disabled={enrolling || enrolled}>
-        {enrolled ? "Yozildingiz" : enrolling ? "Yuborilmoqda..." : "Kursga yozilish"}
-      </button>
+      {!isOwner && (
+        <button onClick={handleEnroll} disabled={enrolling || enrolled}>
+          {enrolled ? "Yozildingiz" : enrolling ? "Yuborilmoqda..." : "Kursga yozilish"}
+        </button>
+      )}
+      {isOwner && (
+        <Link href={`/dashboard/courses/${id}`} className="link-btn">
+          Kursni boshqarish
+        </Link>
+      )}
 
       <h2>Kurs dasturi</h2>
       {course.modules?.length === 0 && <p className="muted">Modullar hali qo&apos;shilmagan.</p>}
@@ -62,7 +84,25 @@ export default function CourseDetailPage() {
         {course.modules?.map((m) => (
           <div key={m.id} className="module">
             <h3>{m.title}</h3>
-            <p className="muted">{m.lessons_count} dars</p>
+            <ul className="list">
+              {m.lessons.map((l) => {
+                const locked = !l.is_free_preview && !canAccessAllLessons;
+                return (
+                  <li key={l.id} className={locked ? "lesson-locked" : ""}>
+                    {locked ? (
+                      <span>
+                        🔒 {l.title} <span className="muted">({l.duration_minutes} daq)</span>
+                      </span>
+                    ) : (
+                      <Link href={`/courses/${id}/lessons/${l.id}`}>
+                        {l.title} <span className="muted">({l.duration_minutes} daq)</span>
+                      </Link>
+                    )}
+                    {l.is_free_preview && <span className="badge free-badge">Bepul</span>}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ))}
       </div>

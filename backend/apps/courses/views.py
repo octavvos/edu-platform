@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -63,7 +64,27 @@ class ModuleViewSet(viewsets.ModelViewSet):
 
 
 class LessonViewSet(viewsets.ModelViewSet):
-    queryset = Lesson.objects.select_related("module", "module__course", "module__course__teacher")
     serializer_class = LessonSerializer
     permission_classes = [IsTeacherOrReadOnly]
     filterset_fields = ["module"]
+
+    def get_queryset(self):
+        qs = Lesson.objects.select_related("module", "module__course", "module__course__teacher")
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return qs.filter(is_free_preview=True)
+        if user.is_admin:
+            return qs
+
+        from apps.enrollments.models import Enrollment
+
+        enrolled_course_ids = Enrollment.objects.filter(
+            student=user, status=Enrollment.Status.ACTIVE
+        ).values_list("course_id", flat=True)
+
+        return qs.filter(
+            Q(is_free_preview=True)
+            | Q(module__course__teacher=user)
+            | Q(module__course_id__in=enrolled_course_ids)
+        )

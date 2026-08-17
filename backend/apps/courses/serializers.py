@@ -32,6 +32,22 @@ class ModuleListSerializer(serializers.ModelSerializer):
         read_only_fields = ("id",)
 
 
+class LessonBriefSerializer(serializers.ModelSerializer):
+    """Lesson summary without `content`/`video_url` — safe to expose on the course page before enrollment."""
+
+    class Meta:
+        model = Lesson
+        fields = ("id", "module", "title", "content_type", "duration_minutes", "order", "is_free_preview")
+
+
+class ModuleWithLessonsSerializer(serializers.ModelSerializer):
+    lessons = LessonBriefSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Module
+        fields = ("id", "course", "title", "order", "lessons")
+
+
 class CourseListSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
     modules_count = serializers.IntegerField(source="modules.count", read_only=True)
@@ -47,7 +63,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
-    modules = ModuleListSerializer(many=True, read_only=True)
+    modules = ModuleWithLessonsSerializer(many=True, read_only=True)
     teacher_name = serializers.CharField(source="teacher.get_full_name", read_only=True)
 
     class Meta:
