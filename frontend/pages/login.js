@@ -19,8 +19,12 @@ export default function LoginPage() {
     try {
       await login(username, password);
       router.push("/dashboard");
-    } catch {
-      setError("Login yoki parol noto'g'ri.");
+    } catch (err) {
+      if (err.response) {
+        setError("Login yoki parol noto'g'ri.");
+      } else {
+        setError("Serverga ulanib bo'lmadi. Backend ishlab turganini tekshiring.");
+      }
     } finally {
       setSubmitting(false);
     }
